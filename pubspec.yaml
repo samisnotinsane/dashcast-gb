@@ -28,6 +28,13 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^0.1.3
+  
+  # Audio support for podcast playback.
+  # Using version 4 (LTS) and light flavour which only supports playback (not recording).
+  #
+  # There are some complications about which version to install, please see docs for more:
+  # https://github.com/dooboolab/flutter_sound/blob/master/doc/install.md#install
+  flutter_sound_lite: ^4.0.0
 
 dev_dependencies:
   flutter_test:
