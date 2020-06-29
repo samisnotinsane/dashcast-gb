@@ -2,8 +2,35 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_sound_lite/flutter_sound_player.dart';
+import 'package:provider/provider.dart';
 import 'package:webfeed/webfeed.dart';
 import 'package:http/http.dart' as http;
+
+final String url = 'https://itsallwidgets.com/podcast/feed';
+
+class Podcast with ChangeNotifier {
+  RssFeed _feed;
+  RssItem _selectedItem;
+
+  RssFeed get feed => _feed;
+  void parse(String url) async {
+    final res = await http.get(url);
+    final xmlStr = res.body;
+    _feed = RssFeed.parse(xmlStr);
+    notifyListeners();
+  }
+
+  set feed(RssFeed value) {
+    _feed = value;
+    notifyListeners();
+  }
+
+  RssItem get selectedItem => _selectedItem;
+  set selectedItem(RssItem value) {
+    _selectedItem = value;
+    notifyListeners();
+  }
+}
 
 void main() {
   runApp(MyApp());
@@ -12,37 +39,31 @@ void main() {
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'The Boring Show',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
+    return ChangeNotifierProvider(
+      create: (_) => Podcast()..parse(url),
+      child: MaterialApp(
+        title: 'The Boring Show',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+        ),
+        home: EpisodesPage(),
       ),
-      home: EpisodesPage(),
     );
   }
 }
 
 class EpisodesPage extends StatelessWidget {
-  final String url = 'https://itsallwidgets.com/podcast/feed';
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: FutureBuilder(
-        future: http.get(url),
-        builder: (context, AsyncSnapshot<http.Response> snapshot) {
-          if (snapshot.hasData) {
-            final response = snapshot.data;
-            if (response.statusCode == 200) {
-              final rssString = response.body;
-              var rssFeed = new RssFeed.parse(rssString);
-              return EpisodeList(rssFeed: rssFeed);
-            } else {
-              Center(
-                child: CircularProgressIndicator(),
-              );
-            }
-          }
+      body: Consumer<Podcast>(
+        builder: (context, podcast, _) {
+          return podcast.feed != null
+              ? EpisodeList(
+                  rssFeed: podcast.feed,
+                )
+              : Center(child: CircularProgressIndicator());
         },
       ),
     );
@@ -69,10 +90,10 @@ class EpisodeList extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 onTap: () {
+                  Provider.of<Podcast>(context, listen: false).selectedItem =
+                      item;
                   Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => PlayerPage(item: item),
-                    ),
+                    MaterialPageRoute(builder: (_) => PlayerPage()),
                   );
                 },
               ))
@@ -90,7 +111,7 @@ class PlayerPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(item.title),
+        title: Text(Provider.of<Podcast>(context).selectedItem.title),
       ),
       body: SafeArea(
         child: Player(),
@@ -102,11 +123,12 @@ class PlayerPage extends StatelessWidget {
 class Player extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final item = Provider.of<Podcast>(context).selectedItem;
     return Column(
       children: [
         Flexible(
           flex: 9,
-          child: Placeholder(),
+          child: Text(item.description),
         ),
         Flexible(
           flex: 2,
@@ -157,9 +179,7 @@ class _PlaybackButtonState extends State<PlaybackButton> {
     setState(() => _isPlaying = false);
   }
 
-  void _play() async {
-    final url =
-        'https://s3-us-west-2.amazonaws.com/anchor-audio-bank/production/2020-2-8/55332291-44100-2-920107b8952c8.mp3';
+  void _play(String url) async {
     await _sound.startPlayer(url);
 
     _playerSubscription = _sound.onPlayerStateChanged
@@ -188,6 +208,8 @@ class _PlaybackButtonState extends State<PlaybackButton> {
 
   @override
   Widget build(BuildContext context) {
+    final item = Provider.of<Podcast>(context).selectedItem;
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -207,7 +229,7 @@ class _PlaybackButtonState extends State<PlaybackButton> {
                 if (_isPlaying) {
                   _stop();
                 } else {
-                  _play();
+                  _play(item.guid);
                 }
               },
             ),
