@@ -123,12 +123,21 @@ class PlayerPage extends StatelessWidget {
 class Player extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final item = Provider.of<Podcast>(context).selectedItem;
+    final podcast = Provider.of<Podcast>(context);
     return Column(
       children: [
         Flexible(
-          flex: 9,
-          child: Text(item.description),
+          flex: 5,
+          child: Image.network(
+            podcast.feed.image.url,
+            fit: BoxFit.cover,
+          ),
+        ),
+        Flexible(
+          flex: 4,
+          child: SingleChildScrollView(
+            child: Text(podcast._selectedItem.description),
+          ),
         ),
         Flexible(
           flex: 2,
