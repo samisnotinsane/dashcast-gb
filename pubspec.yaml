@@ -36,6 +36,12 @@ dependencies:
   # https://github.com/dooboolab/flutter_sound/blob/master/doc/install.md#install
   flutter_sound_lite: ^4.0.0
 
+  # RSS parsing.
+  webfeed: ^0.4.2
+
+  # HTTP requests.
+  http: ^0.12.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

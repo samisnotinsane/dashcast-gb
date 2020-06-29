@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_sound_lite/flutter_sound_player.dart';
+import 'package:webfeed/webfeed.dart';
+import 'package:http/http.dart' as http;
 
 void main() {
   runApp(MyApp());
@@ -13,26 +15,91 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'The Boring Show',
       theme: ThemeData(
-        primarySwatch: Colors.green,
+        primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: BoringPage(),
+      home: EpisodesPage(),
     );
   }
 }
 
-class BoringPage extends StatelessWidget {
+class EpisodesPage extends StatelessWidget {
+  final String url = 'https://itsallwidgets.com/podcast/feed';
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: DashCastApp(),
+      body: FutureBuilder(
+        future: http.get(url),
+        builder: (context, AsyncSnapshot<http.Response> snapshot) {
+          if (snapshot.hasData) {
+            final response = snapshot.data;
+            if (response.statusCode == 200) {
+              final rssString = response.body;
+              var rssFeed = new RssFeed.parse(rssString);
+              return EpisodeList(rssFeed: rssFeed);
+            } else {
+              Center(
+                child: CircularProgressIndicator(),
+              );
+            }
+          }
+        },
       ),
     );
   }
 }
 
-class DashCastApp extends StatelessWidget {
+class EpisodeList extends StatelessWidget {
+  const EpisodeList({
+    Key key,
+    @required this.rssFeed,
+  }) : super(key: key);
+
+  final RssFeed rssFeed;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      children: rssFeed.items
+          .map((item) => ListTile(
+                title: Text(item.title),
+                subtitle: Text(
+                  item.description,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => PlayerPage(item: item),
+                    ),
+                  );
+                },
+              ))
+          .toList(),
+    );
+  }
+}
+
+class PlayerPage extends StatelessWidget {
+  PlayerPage({this.item});
+
+  final RssItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(item.title),
+      ),
+      body: SafeArea(
+        child: Player(),
+      ),
+    );
+  }
+}
+
+class Player extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
